@@ -8,6 +8,7 @@
 		<PackageId>StreamTail</PackageId>
 		<Version>1.0.2</Version>
 		<Authors>Andrey Mutinelli Monteiro</Authors>
+		<RepositoryUrl>https://github.com/andreymmonteiro/StreamTail</RepositoryUrl>
 	</PropertyGroup>
 
 	<ItemGroup>
