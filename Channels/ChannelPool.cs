@@ -1,6 +1,7 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using RabbitMQ.Client;
+using StreamTail.Options;
 
 namespace StreamTail.Channels;
 
@@ -8,96 +9,110 @@ public sealed class ChannelPool : IChannelPool
 {
     private readonly IConnection _connection;
     private readonly ConcurrentQueue<(IChannel Channel, long LastUse)> _idle = new();
-    private readonly TimeSpan _idleCutoff = TimeSpan.FromMinutes(5);
+    private readonly TimeSpan _idleCutoff;
     private readonly SemaphoreSlim _slots;
     private readonly Task _sweeper;
     private readonly PeriodicTimer _sweepTimer;
+    private readonly CancellationTokenSource _sweepCts;
+    private readonly int _minSize;
 
-    private readonly int poolSize = 500; // Adjust the pool size as needed
-    private readonly int minSize = 1;
-
-
-    public ChannelPool(IConnection connection)
+    public ChannelPool(IConnection connection, ChannelPoolOptions? options = null)
     {
+        options ??= new ChannelPoolOptions();
         _connection = connection;
-        _slots = new SemaphoreSlim(poolSize, poolSize);
-        _sweepTimer = new(TimeSpan.FromMinutes(1));
-        _sweeper = Task.Run(SweepWatchAsync);
+        _minSize = options.MinPoolSize;
+        _idleCutoff = options.IdleChannelTimeout;
+        _slots = new SemaphoreSlim(options.MaxPoolSize, options.MaxPoolSize);
+        _sweepTimer = new PeriodicTimer(options.SweepInterval);
+        _sweepCts = new CancellationTokenSource();
+        _sweeper = Task.Run(() => SweepWatchAsync(_sweepCts.Token));
     }
 
     public async ValueTask<ChannelLease> RentAsync(CancellationToken ct = default)
     {
         await _slots.WaitAsync(ct);
 
-        if (!_idle.TryDequeue(out var tuple) || !tuple.Channel.IsOpen)
+        try
         {
-            var channel = await _connection.CreateChannelAsync(cancellationToken: ct);
+            IChannel channel;
+            if (_idle.TryDequeue(out var tuple))
+            {
+                if (tuple.Channel.IsOpen)
+                {
+                    channel = tuple.Channel;
+                }
+                else
+                {
+                    try { await tuple.Channel.DisposeAsync(); } catch { }
+                    channel = await _connection.CreateChannelAsync(cancellationToken: ct);
+                }
+            }
+            else
+            {
+                channel = await _connection.CreateChannelAsync(cancellationToken: ct);
+            }
 
-            tuple = (channel, Stopwatch.GetTimestamp());
+            return new ChannelLease(this, channel);
         }
-
-        return new ChannelLease(this, tuple.Channel);
+        catch
+        {
+            _slots.Release();
+            throw;
+        }
     }
 
     public async Task Return(IChannel channel)
     {
-        if (!channel.IsOpen)
+        if (channel.IsOpen)
         {
-            try
-            {
-                await channel.DisposeAsync();
-            }
-            finally
-            {
-                channel = await _connection.CreateChannelAsync();
-            }
+            _idle.Enqueue((channel, Stopwatch.GetTimestamp()));
+            _slots.Release();
+            return;
         }
 
-        _idle.Enqueue((channel, Stopwatch.GetTimestamp()));
+        try { await channel.DisposeAsync(); } catch { }
         _slots.Release();
     }
 
-    private async Task SweepWatchAsync()
+    private async Task SweepWatchAsync(CancellationToken ct)
     {
         try
         {
-            while (await _sweepTimer.WaitForNextTickAsync())
-            {
+            while (await _sweepTimer.WaitForNextTickAsync(ct))
                 await SweepAsync();
-            }
         }
-        finally { }
+        catch (OperationCanceledException) { }
     }
 
-    private async Task SweepAsync()
+    internal async Task SweepAsync()
     {
         var nowTicks = Stopwatch.GetTimestamp();
 
-        var idleNow = _idle.Count;
-        if (idleNow >= minSize &&
-            idleNow > 0 &&
-            _idle.TryPeek(out var head) &&
-            TimestampOlderThanCutoff(head.LastUse, nowTicks) &&
-            _idle.TryDequeue(out var old))
+        while (_idle.Count > _minSize &&
+               _idle.TryPeek(out var head) &&
+               TimestampOlderThanCutoff(head.LastUse, nowTicks) &&
+               _idle.TryDequeue(out var old))
         {
-            await old.Channel.DisposeAsync();
+            try { await old.Channel.DisposeAsync(); } catch { }
         }
     }
 
-    private bool TimestampOlderThanCutoff(long lastUse, long nowTicks)
-    {
-        return nowTicks - lastUse >= _idleCutoff.Ticks;
-    }
+    private bool TimestampOlderThanCutoff(long lastUse, long nowTicks) =>
+        Stopwatch.GetElapsedTime(lastUse, nowTicks) >= _idleCutoff;
 
     public async ValueTask DisposeAsync()
     {
+        _sweepCts.Cancel();
+        try { await _sweeper; } catch { }
+        _sweepTimer.Dispose();
+
         while (_idle.TryDequeue(out var tuple))
         {
-            await tuple.Channel.DisposeAsync();
+            try { await tuple.Channel.DisposeAsync(); } catch { }
         }
+
         _slots.Dispose();
+        _sweepCts.Dispose();
         await _connection.DisposeAsync();
-        await ValueTask.CompletedTask;
     }
 }
-

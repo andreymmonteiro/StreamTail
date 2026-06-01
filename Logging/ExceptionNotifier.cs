@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using StreamTail.Channels;
@@ -18,16 +18,11 @@ public sealed class ExceptionNotifier : IExceptionNotifier
 
     public async Task Notify(Exception exception, string dlqName, string message, CancellationToken cancellationToken)
     {
-        var properties = new BasicProperties()
-        {
-            Persistent = true
-        };
-
-        _logger.LogError(exception, "Unhandled exception");
-
-        _logger.LogError(exception, "Failed to process consolidation sending to DLQ");
+        _logger.LogError(exception, "Failed to process message, sending to DLQ: {DlqName}", dlqName);
 
         await using var lease = await _pool.RentAsync(cancellationToken);
+
+        var properties = new BasicProperties { Persistent = true };
 
         var body = JsonSerializer.SerializeToUtf8Bytes(new
         {
@@ -38,7 +33,7 @@ public sealed class ExceptionNotifier : IExceptionNotifier
 
         await lease.Channel.BasicPublishAsync(
             exchange: "",
-            routingKey: "",
+            routingKey: dlqName,
             mandatory: true,
             basicProperties: properties,
             body: body,
