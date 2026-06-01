@@ -6,7 +6,7 @@
 		<Nullable>enable</Nullable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageId>StreamTail</PackageId>
-		<Version>1.0.2</Version>
+		<Version>2.0.0</Version>
 		<Authors>Andrey Mutinelli Monteiro</Authors>
 	</PropertyGroup>
 

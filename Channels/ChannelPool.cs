@@ -30,29 +30,28 @@ public sealed class ChannelPool : IChannelPool
 
     public async ValueTask<ChannelLease> RentAsync(CancellationToken ct = default)
     {
+        var channel = await AcquireChannelAsync(ct);
+        return new ChannelLease(this, channel);
+    }
+
+    // Acquires a channel and its semaphore slot. The caller is responsible for
+    // eventually calling Return(channel) to release the slot.
+    internal async ValueTask<IChannel> AcquireChannelAsync(CancellationToken ct = default)
+    {
         await _slots.WaitAsync(ct);
 
         try
         {
-            IChannel channel;
             if (_idle.TryDequeue(out var tuple))
             {
                 if (tuple.Channel.IsOpen)
-                {
-                    channel = tuple.Channel;
-                }
-                else
-                {
-                    try { await tuple.Channel.DisposeAsync(); } catch { }
-                    channel = await _connection.CreateChannelAsync(cancellationToken: ct);
-                }
-            }
-            else
-            {
-                channel = await _connection.CreateChannelAsync(cancellationToken: ct);
+                    return tuple.Channel;
+
+                try { await tuple.Channel.DisposeAsync(); } catch { }
+                return await _connection.CreateChannelAsync(cancellationToken: ct);
             }
 
-            return new ChannelLease(this, channel);
+            return await _connection.CreateChannelAsync(cancellationToken: ct);
         }
         catch
         {
