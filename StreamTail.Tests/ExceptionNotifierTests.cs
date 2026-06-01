@@ -57,7 +57,7 @@ public class ExceptionNotifierTests
 
         var notifier = CreateNotifier();
 
-        await notifier.Notify(new Exception("oops"), "my-dlq", "payload", CancellationToken.None);
+        await notifier.Notify(new Exception("oops"), "", "my-dlq", "payload", CancellationToken.None);
 
         Assert.Equal("my-dlq", capturedRoutingKey);
     }
@@ -78,7 +78,7 @@ public class ExceptionNotifierTests
                 (exchange, _, _, _, _, _) => capturedExchange = exchange)
             .Returns(ValueTask.CompletedTask);
 
-        await CreateNotifier().Notify(new Exception("err"), "queue", "msg", CancellationToken.None);
+        await CreateNotifier().Notify(new Exception("err"), "", "queue", "msg", CancellationToken.None);
 
         Assert.Equal("", capturedExchange);
     }
@@ -86,7 +86,7 @@ public class ExceptionNotifierTests
     [Fact]
     public async Task Notify_LogsExactlyOnce()
     {
-        await CreateNotifier().Notify(new InvalidOperationException("fail"), "dlq", "body", CancellationToken.None);
+        await CreateNotifier().Notify(new InvalidOperationException("fail"), "", "dlq", "body", CancellationToken.None);
 
         _loggerMock.Verify(
             l => l.Log(
@@ -115,7 +115,7 @@ public class ExceptionNotifierTests
             .Returns(ValueTask.CompletedTask);
 
         var exception = new InvalidOperationException("something went wrong");
-        await CreateNotifier().Notify(exception, "dlq", "original-message", CancellationToken.None);
+        await CreateNotifier().Notify(exception, "", "dlq", "original-message", CancellationToken.None);
 
         var doc = JsonDocument.Parse(capturedBody.ToArray());
         Assert.Equal("something went wrong", doc.RootElement.GetProperty("Reason").GetString());
@@ -138,7 +138,7 @@ public class ExceptionNotifierTests
                 (_, _, _, props, _, _) => capturedProps = props)
             .Returns(ValueTask.CompletedTask);
 
-        await CreateNotifier().Notify(new Exception("err"), "dlq", "msg", CancellationToken.None);
+        await CreateNotifier().Notify(new Exception("err"), "", "dlq", "msg", CancellationToken.None);
 
         Assert.NotNull(capturedProps);
         Assert.True(capturedProps!.Persistent);
@@ -147,7 +147,7 @@ public class ExceptionNotifierTests
     [Fact]
     public async Task Notify_RentsAndReturnsChannel()
     {
-        await CreateNotifier().Notify(new Exception("err"), "dlq", "msg", CancellationToken.None);
+        await CreateNotifier().Notify(new Exception("err"), "", "dlq", "msg", CancellationToken.None);
 
         _poolMock.Verify(p => p.RentAsync(It.IsAny<CancellationToken>()), Times.Once);
         _poolMock.Verify(p => p.Return(It.IsAny<IChannel>()), Times.Once);

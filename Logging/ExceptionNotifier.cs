@@ -16,7 +16,7 @@ public sealed class ExceptionNotifier : IExceptionNotifier
         _logger = logger;
     }
 
-    public async Task Notify(Exception exception, string dlqName, string message, CancellationToken cancellationToken)
+    public async Task Notify(Exception exception, string exchange, string dlqName, string message, CancellationToken cancellationToken)
     {
         _logger.LogError(exception, "Failed to process message, sending to DLQ: {DlqName}", dlqName);
 
@@ -32,7 +32,7 @@ public sealed class ExceptionNotifier : IExceptionNotifier
         });
 
         await lease.Channel.BasicPublishAsync(
-            exchange: "",
+            exchange: exchange,
             routingKey: dlqName,
             mandatory: true,
             basicProperties: properties,

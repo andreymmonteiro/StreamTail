@@ -2,5 +2,5 @@
 
 public interface IExceptionNotifier
 {
-    Task Notify(Exception exception, string dlqName, string message, CancellationToken cancellationToken);
+    Task Notify(Exception exception, string exchange, string dlqName, string message, CancellationToken cancellationToken);
 }
