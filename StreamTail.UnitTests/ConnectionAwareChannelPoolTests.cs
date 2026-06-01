@@ -4,7 +4,7 @@ using StreamTail.Channels;
 using StreamTail.Connections;
 using StreamTail.Options;
 
-namespace StreamTail.Tests;
+namespace StreamTail.UnitTests;
 
 public class ConnectionAwareChannelPoolTests
 {

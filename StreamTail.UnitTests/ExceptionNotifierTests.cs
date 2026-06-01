@@ -5,7 +5,7 @@ using RabbitMQ.Client;
 using StreamTail.Channels;
 using StreamTail.Logging;
 
-namespace StreamTail.Tests;
+namespace StreamTail.UnitTests;
 
 public class ExceptionNotifierTests
 {

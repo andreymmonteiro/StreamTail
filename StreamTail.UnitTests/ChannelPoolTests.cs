@@ -1,10 +1,9 @@
-using System.Diagnostics;
 using Moq;
 using RabbitMQ.Client;
 using StreamTail.Channels;
 using StreamTail.Options;
 
-namespace StreamTail.Tests;
+namespace StreamTail.UnitTests;
 
 public class ChannelPoolTests
 {

@@ -3,7 +3,7 @@ using RabbitMQ.Client;
 using StreamTail.Connections;
 using StreamTail.Options;
 
-namespace StreamTail.Tests;
+namespace StreamTail.UnitTests;
 
 public class ConnectionPoolTests
 {
