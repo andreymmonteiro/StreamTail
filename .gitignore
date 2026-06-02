@@ -67,3 +67,4 @@ Desktop.ini
 
 ## Optional: JetBrains Rider
 .idea/
+/StreamTail.IntegrationTests/ExhaustionTests.cs
