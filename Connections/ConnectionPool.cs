@@ -6,7 +6,7 @@ using StreamTail.Options;
 
 namespace StreamTail.Connections;
 
-public sealed class ConnectionPool : IConnectionProvider
+internal sealed class ConnectionPool : IConnectionProvider
 {
     private readonly IConnectionFactory _factory;
     private readonly ConcurrentQueue<(IConnection Connection, long LastUse)> _idle = new();

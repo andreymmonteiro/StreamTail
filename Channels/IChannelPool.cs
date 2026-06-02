@@ -2,7 +2,7 @@
 
 namespace StreamTail.Channels;
 
-public interface IChannelPool : IAsyncDisposable
+internal interface IChannelPool : IAsyncDisposable
 {
     ValueTask<ChannelLease> RentAsync(CancellationToken ct = default);
 

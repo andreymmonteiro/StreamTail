@@ -5,7 +5,7 @@ using StreamTail.Channels;
 
 namespace StreamTail.Logging;
 
-public sealed class ExceptionNotifier : IExceptionNotifier
+internal sealed class ExceptionNotifier : IExceptionNotifier
 {
     private readonly IChannelPool _pool;
     private readonly ILogger<ExceptionNotifier> _logger;

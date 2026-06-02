@@ -2,8 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using RabbitMQ.Client;
 using StreamTail.Channels;
 using StreamTail.Connections;
+using StreamTail.Events;
 using StreamTail.Logging;
 using StreamTail.Options;
+using StreamTail.Publishing;
 
 namespace StreamTail.DI;
 
@@ -48,6 +50,26 @@ public static class StreamTailServiceCollectionExtension
         });
 
         services.AddScoped<IExceptionNotifier, ExceptionNotifier>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers a publisher for <typeparamref name="TEvent"/>. Must be called after AddStreamTail or AddStreamTailWithConnectionPooling.
+    /// </summary>
+    public static IServiceCollection AddPublisher<TEvent>(
+        this IServiceCollection services,
+        Action<PublisherOptions>? configure = null)
+        where TEvent : IDomainEvent
+    {
+        var options = new PublisherOptions();
+        configure?.Invoke(options);
+
+        services.AddSingleton<IPublisherHandler<TEvent>>(sp =>
+        {
+            var pool = sp.GetRequiredService<IChannelPool>();
+            return new PublisherHandler<TEvent>(pool, options);
+        });
 
         return services;
     }

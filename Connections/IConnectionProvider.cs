@@ -3,7 +3,7 @@ using StreamTail.Monitoring;
 
 namespace StreamTail.Connections;
 
-public interface IConnectionProvider : IAsyncDisposable
+internal interface IConnectionProvider : IAsyncDisposable
 {
     Task<IConnection> GetConnectionAsync(CancellationToken ct = default);
     Task ReturnConnectionAsync(IConnection connection);

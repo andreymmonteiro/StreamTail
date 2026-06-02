@@ -5,7 +5,7 @@ using StreamTail.Options;
 
 namespace StreamTail.Channels;
 
-public sealed class ChannelPool : IChannelPool
+internal sealed class ChannelPool : IChannelPool
 {
     private readonly IConnection _connection;
     private readonly ConcurrentQueue<(IChannel Channel, long LastUse)> _idle = new();

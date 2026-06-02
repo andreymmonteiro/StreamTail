@@ -2,7 +2,7 @@
 
 namespace StreamTail.Channels;
 
-public sealed class ChannelLease : IAsyncDisposable
+internal sealed class ChannelLease : IAsyncDisposable
 {
     private readonly IChannelPool _pool;
     public readonly IChannel Channel;
