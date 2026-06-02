@@ -28,7 +28,7 @@ public sealed class ChannelPool : IChannelPool
         _sweeper = Task.Run(() => SweepWatchAsync(_sweepCts.Token));
     }
 
-    public async Task<ChannelLease> RentAsync(CancellationToken ct = default)
+    public async ValueTask<ChannelLease> RentAsync(CancellationToken ct = default)
     {
         var channel = await AcquireChannelAsync(ct);
         return new ChannelLease(this, channel);

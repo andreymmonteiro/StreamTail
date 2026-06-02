@@ -19,7 +19,7 @@ public sealed class ConnectionAwareChannelPool : IChannelPool
         _channelOptions = channelOptions ?? new ChannelPoolOptions();
     }
 
-    public async Task<ChannelLease> RentAsync(CancellationToken ct = default)
+    public async ValueTask<ChannelLease> RentAsync(CancellationToken ct = default)
     {
         var connection = await _connectionProvider.GetConnectionAsync(ct);
 
