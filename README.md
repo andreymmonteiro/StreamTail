@@ -151,10 +151,6 @@ Notes
 - The library targets net10.0. Adjust your application's target framework accordingly.
 - This README focuses on publishing and channel pooling; consumers (message handlers) are out of scope and should use the standard RabbitMQ consumer patterns.
 
-License
--------
-Add a LICENSE file if you plan to publish this project.
-
 Questions
 ---------
 If something in the examples does not match your environment, consult the code in the DI folder and the options classes for precise configuration details.
